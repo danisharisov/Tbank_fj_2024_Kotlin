@@ -8,16 +8,26 @@ private val logger = KotlinLogging.logger {}
 
 fun main() = runBlocking {
     val newsService = NewsService()
+    val parallelFetcher = ParallelNewsFetcherWithWorker(newsService)
 
     try {
-        logger.info("Starting to fetch news")
+        val startParallel = System.currentTimeMillis()
+        logger.info("Starting to fetch news in parallel")
+
+        parallelFetcher.fetchAndSaveParallel(this, "parallel_news.csv")
+
+        val endParallel = System.currentTimeMillis()
+        logger.info("Время выполнения многопоточной обработки: ${endParallel - startParallel} ms")
+
+        val startSequential = System.currentTimeMillis()
+        logger.info("Starting to fetch news sequentially")
         val news = newsService.getNews()
-        logger.info("Fetched ${news.size} news items")
         val newsProcessor = NewsProcessor()
         val filteredNews = newsProcessor.getMostRatedNews(news, 50, LocalDate.now())
-        logger.info("Filtered to ${filteredNews.size} most rated news items")
 
         newsService.saveNews("news.csv", filteredNews)
+        val endSequential = System.currentTimeMillis()
+        logger.info("Время выполнения однопоточной обработки: ${endSequential - startSequential} ms")
         savePrettyNews(filteredNews, "PrettyPrintedNews.txt")
 
     } catch (e: Exception) {
